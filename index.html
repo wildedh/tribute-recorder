@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stake Presidency Tribute — Record Your Message</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --bg: #faf7f2;
@@ -168,17 +167,14 @@
     </div>
   </div>
 
-  <!-- ============ CARD 3: sign in + upload ============ -->
+  <!-- ============ CARD 3: upload ============ -->
   <div class="card">
     <div class="step-label">Step 3 — Send it</div>
     <p style="font-size:0.88rem;color:var(--muted);margin-top:0;">
-      You'll be asked to sign in with Google so your video can be saved
-      directly to the organizer's shared folder. Nothing is posted publicly.
+      No account or sign-in needed — just click below and your video will be
+      sent privately to the organizer.
     </p>
     <div class="btn-row">
-      <div id="googleSignInBtn"></div>
-    </div>
-    <div class="btn-row" style="margin-top:14px;">
       <button id="uploadBtn" class="btn-primary" disabled>Upload My Video</button>
     </div>
     <progress id="uploadProgress" value="0" max="100" style="display:none;"></progress>
@@ -196,11 +192,8 @@
    CONFIG — EDIT THIS SECTION FOR YOUR PROJECT
    ========================================================================= */
 
-// From Google Cloud Console → Credentials → OAuth 2.0 Client ID (Web application)
-const GOOGLE_CLIENT_ID = "992506924522-03rdq11vu3roj8m1evbt47bv9ncvk5kt.apps.googleusercontent.com";
-
-// Drive scope that only lets this app touch files it creates itself
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+// The /exec URL from your Apps Script "Deploy as Web app" step
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwF-5fp5iN29nLrmsmt9VhLDmUzdlmTjwuQbxsjDSsS6x5KgqhDue-gkkscjZH_-cfQ/exec";
 
 // One entry per honoree. folderId is the ID from that person's Drive folder URL:
 // https://drive.google.com/drive/folders/<THIS_PART_IS_THE_ID>
@@ -240,7 +233,6 @@ let recordedChunks = [];
 let recordedBlob = null;
 let timerInterval = null;
 let secondsElapsed = 0;
-let accessToken = null;
 
 const personSelect = document.getElementById("personSelect");
 const nameInput = document.getElementById("nameInput");
@@ -353,30 +345,21 @@ retakeBtn.addEventListener("click", async () => {
   else preview.srcObject = mediaStream;
 });
 
-/* ---------------- Google Sign-In ---------------- */
-let tokenClient;
-window.onload = () => {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: DRIVE_SCOPE,
-    callback: (resp) => {
-      if (resp.error) {
-        setStatus("Sign-in failed: " + resp.error, "error");
-        return;
-      }
-      accessToken = resp.access_token;
-      setStatus("Signed in. You can upload now.", "success");
-    }
+/* ---------------- Upload via Apps Script backend (no sign-in needed) ---------------- */
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      // reader.result looks like "data:video/webm;base64,AAAA..."
+      const base64 = reader.result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
+}
 
-  const btn = document.createElement("button");
-  btn.textContent = "Sign in with Google";
-  btn.className = "btn-secondary";
-  btn.onclick = () => tokenClient.requestAccessToken();
-  document.getElementById("googleSignInBtn").appendChild(btn);
-};
-
-/* ---------------- Upload to Drive ---------------- */
 uploadBtn.addEventListener("click", async () => {
   if (!recordedBlob) {
     setStatus("Please record a video first.", "error");
@@ -384,10 +367,6 @@ uploadBtn.addEventListener("click", async () => {
   }
   if (!nameInput.value.trim()) {
     setStatus("Please enter your name before uploading.", "error");
-    return;
-  }
-  if (!accessToken) {
-    setStatus("Please sign in with Google first.", "error");
     return;
   }
 
@@ -398,42 +377,28 @@ uploadBtn.addEventListener("click", async () => {
   }
 
   uploadBtn.disabled = true;
-  setStatus("Preparing upload…", "info");
+  setStatus("Preparing your video…", "info");
   progressEl.style.display = "block";
   progressEl.value = 0;
 
   const safeContributor = nameInput.value.trim().replace(/[^a-z0-9 _-]/gi, "");
   const fileName = `${person.name} - from ${safeContributor} - ${Date.now()}.webm`;
 
-  const metadata = {
-    name: fileName,
-    parents: [person.folderId]
-  };
-
   try {
-    // Step 1: start a resumable upload session
-    const sessionRes = await fetch(
-      "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + accessToken,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(metadata)
-      }
-    );
-    if (!sessionRes.ok) {
-      const errText = await sessionRes.text();
-      throw new Error("Could not start upload session: " + errText);
-    }
-    const uploadUrl = sessionRes.headers.get("Location");
+    const base64Data = await blobToBase64(recordedBlob);
 
-    // Step 2: PUT the actual file bytes, with progress
+    const payload = JSON.stringify({
+      folderId: person.folderId,
+      fileName: fileName,
+      mimeType: recordedBlob.type || "video/webm",
+      base64Data: base64Data
+    });
+
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("PUT", uploadUrl, true);
-      xhr.setRequestHeader("Content-Type", recordedBlob.type || "video/webm");
+      xhr.open("POST", APPS_SCRIPT_URL, true);
+      // text/plain avoids a CORS preflight request, which Apps Script doesn't handle
+      xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           progressEl.value = Math.round((e.loaded / e.total) * 100);
@@ -442,17 +407,17 @@ uploadBtn.addEventListener("click", async () => {
       };
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error("Upload failed: " + xhr.status + " " + xhr.responseText));
+        else reject(new Error("Upload failed: " + xhr.status));
       };
       xhr.onerror = () => reject(new Error("Network error during upload."));
-      xhr.send(recordedBlob);
+      xhr.send(payload);
     });
 
-    setStatus("✅ Thank you! Your video was uploaded successfully.", "success");
+    setStatus("✅ Thank you! Your video was sent successfully.", "success");
     progressEl.style.display = "none";
   } catch (err) {
     console.error(err);
-    setStatus("Something went wrong: " + err.message, "error");
+    setStatus("Something went wrong: " + err.message + " — please try again.", "error");
     uploadBtn.disabled = false;
   }
 });
