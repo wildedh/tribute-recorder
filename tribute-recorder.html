@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stake Presidency Tribute — Record Your Message</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --ink: #2b2620;
+    --muted: #7a7267;
+    --accent: #7a5c3e;
+    --accent-dark: #5e4630;
+    --border: #e6ded2;
+    --danger: #b3412f;
+    --success: #3f6b4a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 60px;
+  }
+  .wrap { width: 100%; max-width: 520px; }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+    font-weight: 600;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+    line-height: 1.4;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  select, input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 1rem;
+    background: #fff;
+    margin-bottom: 16px;
+  }
+  .prompt-box {
+    background: #f4efe6;
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    line-height: 1.45;
+  }
+  video {
+    width: 100%;
+    border-radius: 10px;
+    background: #111;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    margin-bottom: 14px;
+  }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  button {
+    border: none;
+    border-radius: 999px;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+  .btn-secondary { background: #eee6d8; color: var(--ink); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .timer {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .status {
+    font-size: 0.9rem;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    display: none;
+  }
+  .status.info { display: block; background: #eef2f7; color: #2e4a63; }
+  .status.success { display: block; background: #e9f4ec; color: var(--success); }
+  .status.error { display: block; background: #fbebe8; color: var(--danger); }
+  progress {
+    width: 100%;
+    height: 8px;
+    margin-top: 10px;
+    accent-color: var(--accent);
+  }
+  .footnote {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.5;
+  }
+  .step-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Share a Message for the Stake Presidency</h1>
+  <p class="subtitle" id="introText">
+    Thank you for taking a moment to record a short video. Your words will be
+    part of a keepsake for President Goulding and his counselors, who have
+    served our stake with love.
+  </p>
+
+  <!-- ============ CARD 1: choose recipient + prompt ============ -->
+  <div class="card">
+    <div class="step-label">Step 1</div>
+    <label for="personSelect">Who is this message for?</label>
+    <select id="personSelect"></select>
+
+    <label for="nameInput">Your name (so we know who this is from)</label>
+    <input type="text" id="nameInput" placeholder="e.g. Sarah Thompson">
+
+    <div class="prompt-box" id="promptBox">
+      Pick a person above to see a suggested prompt.
+    </div>
+  </div>
+
+  <!-- ============ CARD 2: record ============ -->
+  <div class="card">
+    <div class="step-label">Step 2 — Record</div>
+    <video id="preview" autoplay muted playsinline></video>
+    <div class="timer" id="timer">00:00 / 01:30 max</div>
+    <div class="btn-row">
+      <button id="startBtn" class="btn-primary">● Start Recording</button>
+      <button id="stopBtn" class="btn-danger" disabled>■ Stop</button>
+      <button id="retakeBtn" class="btn-secondary" disabled>↺ Re-record</button>
+    </div>
+  </div>
+
+  <!-- ============ CARD 3: sign in + upload ============ -->
+  <div class="card">
+    <div class="step-label">Step 3 — Send it</div>
+    <p style="font-size:0.88rem;color:var(--muted);margin-top:0;">
+      You'll be asked to sign in with Google so your video can be saved
+      directly to the organizer's shared folder. Nothing is posted publicly.
+    </p>
+    <div class="btn-row">
+      <div id="googleSignInBtn"></div>
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button id="uploadBtn" class="btn-primary" disabled>Upload My Video</button>
+    </div>
+    <progress id="uploadProgress" value="0" max="100" style="display:none;"></progress>
+    <div id="status" class="status"></div>
+  </div>
+
+  <p class="footnote">
+    Having trouble recording or uploading? Ask the organizer for a backup
+    way to send your video.
+  </p>
+</div>
+
+<script>
+/* =========================================================================
+   CONFIG — EDIT THIS SECTION FOR YOUR PROJECT
+   ========================================================================= */
+
+// From Google Cloud Console → Credentials → OAuth 2.0 Client ID (Web application)
+const GOOGLE_CLIENT_ID = "992506924522-03rdq11vu3roj8m1evbt47bv9ncvk5kt.apps.googleusercontent.com";
+
+// Drive scope that only lets this app touch files it creates itself
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+// One entry per honoree. folderId is the ID from that person's Drive folder URL:
+// https://drive.google.com/drive/folders/<THIS_PART_IS_THE_ID>
+// Each folder must be shared as "Anyone with the link" → Editor (Viewer will NOT work for uploads).
+const PEOPLE = [
+  {
+    name: "President Goulding Tribute",
+    folderId: "1CrY-9y46TKmlfEkdgI2gaxwfnWCx6mwW",
+    prompt: "What is one specific moment when President Goulding's leadership affected you personally? What quality do you associate most with his service?"
+  },
+  {
+    name: "Counselor Newton Tribute",
+    folderId: "1LPjBUzOb7NaaqO3OcEGA6cY-yT8HJzMf",
+    prompt: "What is one specific moment when Counselor Newton's leadership affected you personally? What quality do you associate most with his service?"
+  },
+  {
+    name: "Counselor Griffin Tribute",
+    folderId: "1yUuXMPrqj-iT7OObYuTtbEhzEWYYbMXg",
+    prompt: "What is one specific moment when Counselor Griffin's leadership affected you personally? What quality do you associate most with his service?"
+  },
+  {
+    name: "Counselor Francis Tribute",
+    folderId: "13VZSuADlBEnIIhWbub3XgVWNvOWcvbc0",
+    prompt: "What is one specific moment when Counselor Francis's leadership affected you personally? What quality do you associate most with his service?"
+  }
+];
+
+const MAX_RECORD_SECONDS = 90; // hard stop so clips stay comparable in length
+
+/* =========================================================================
+   END CONFIG
+   ========================================================================= */
+
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordedBlob = null;
+let timerInterval = null;
+let secondsElapsed = 0;
+let accessToken = null;
+
+const personSelect = document.getElementById("personSelect");
+const nameInput = document.getElementById("nameInput");
+const promptBox = document.getElementById("promptBox");
+const preview = document.getElementById("preview");
+const timerEl = document.getElementById("timer");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const retakeBtn = document.getElementById("retakeBtn");
+const uploadBtn = document.getElementById("uploadBtn");
+const statusEl = document.getElementById("status");
+const progressEl = document.getElementById("uploadProgress");
+
+// Populate the person dropdown from config
+PEOPLE.forEach((p, i) => {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = p.name;
+  personSelect.appendChild(opt);
+});
+function updatePrompt() {
+  const p = PEOPLE[personSelect.value];
+  promptBox.textContent = p.prompt;
+}
+personSelect.addEventListener("change", updatePrompt);
+updatePrompt();
+
+function setStatus(message, type) {
+  statusEl.textContent = message;
+  statusEl.className = "status " + (type || "info");
+}
+
+async function initCamera() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: true
+    });
+    preview.srcObject = mediaStream;
+  } catch (err) {
+    setStatus("Couldn't access your camera/microphone. Please allow camera access and reload the page.", "error");
+  }
+}
+initCamera();
+
+function formatTime(s) {
+  const m = String(Math.floor(s / 60)).padStart(2, "0");
+  const sec = String(s % 60).padStart(2, "0");
+  return `${m}:${sec}`;
+}
+
+startBtn.addEventListener("click", () => {
+  if (!mediaStream) return;
+  recordedChunks = [];
+  secondsElapsed = 0;
+  timerEl.textContent = `00:00 / ${formatTime(MAX_RECORD_SECONDS)} max`;
+
+  let mimeType = "video/webm;codecs=vp9,opus";
+  if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "video/webm";
+
+  mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) recordedChunks.push(e.data);
+  };
+  mediaRecorder.onstop = () => {
+    recordedBlob = new Blob(recordedChunks, { type: mimeType });
+    preview.srcObject = null;
+    preview.src = URL.createObjectURL(recordedBlob);
+    preview.muted = false;
+    preview.controls = true;
+    preview.play();
+    uploadBtn.disabled = false;
+  };
+  mediaRecorder.start();
+
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  retakeBtn.disabled = true;
+  uploadBtn.disabled = true;
+
+  timerInterval = setInterval(() => {
+    secondsElapsed++;
+    timerEl.textContent = `${formatTime(secondsElapsed)} / ${formatTime(MAX_RECORD_SECONDS)} max`;
+    if (secondsElapsed >= MAX_RECORD_SECONDS) stopRecording();
+  }, 1000);
+});
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+  clearInterval(timerInterval);
+  stopBtn.disabled = true;
+  retakeBtn.disabled = false;
+}
+stopBtn.addEventListener("click", stopRecording);
+
+retakeBtn.addEventListener("click", async () => {
+  preview.pause();
+  preview.removeAttribute("src");
+  preview.controls = false;
+  preview.muted = true;
+  recordedBlob = null;
+  uploadBtn.disabled = true;
+  startBtn.disabled = false;
+  retakeBtn.disabled = true;
+  setStatus("", "");
+  statusEl.className = "status";
+  if (!mediaStream || !mediaStream.active) await initCamera();
+  else preview.srcObject = mediaStream;
+});
+
+/* ---------------- Google Sign-In ---------------- */
+let tokenClient;
+window.onload = () => {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: (resp) => {
+      if (resp.error) {
+        setStatus("Sign-in failed: " + resp.error, "error");
+        return;
+      }
+      accessToken = resp.access_token;
+      setStatus("Signed in. You can upload now.", "success");
+    }
+  });
+
+  const btn = document.createElement("button");
+  btn.textContent = "Sign in with Google";
+  btn.className = "btn-secondary";
+  btn.onclick = () => tokenClient.requestAccessToken();
+  document.getElementById("googleSignInBtn").appendChild(btn);
+};
+
+/* ---------------- Upload to Drive ---------------- */
+uploadBtn.addEventListener("click", async () => {
+  if (!recordedBlob) {
+    setStatus("Please record a video first.", "error");
+    return;
+  }
+  if (!nameInput.value.trim()) {
+    setStatus("Please enter your name before uploading.", "error");
+    return;
+  }
+  if (!accessToken) {
+    setStatus("Please sign in with Google first.", "error");
+    return;
+  }
+
+  const person = PEOPLE[personSelect.value];
+  if (!person.folderId || person.folderId.startsWith("PASTE_")) {
+    setStatus("Setup error: this person's Drive folder isn't configured yet.", "error");
+    return;
+  }
+
+  uploadBtn.disabled = true;
+  setStatus("Preparing upload…", "info");
+  progressEl.style.display = "block";
+  progressEl.value = 0;
+
+  const safeContributor = nameInput.value.trim().replace(/[^a-z0-9 _-]/gi, "");
+  const fileName = `${person.name} - from ${safeContributor} - ${Date.now()}.webm`;
+
+  const metadata = {
+    name: fileName,
+    parents: [person.folderId]
+  };
+
+  try {
+    // Step 1: start a resumable upload session
+    const sessionRes = await fetch(
+      "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + accessToken,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(metadata)
+      }
+    );
+    if (!sessionRes.ok) {
+      const errText = await sessionRes.text();
+      throw new Error("Could not start upload session: " + errText);
+    }
+    const uploadUrl = sessionRes.headers.get("Location");
+
+    // Step 2: PUT the actual file bytes, with progress
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", uploadUrl, true);
+      xhr.setRequestHeader("Content-Type", recordedBlob.type || "video/webm");
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          progressEl.value = Math.round((e.loaded / e.total) * 100);
+          setStatus(`Uploading… ${progressEl.value}%`, "info");
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error("Upload failed: " + xhr.status + " " + xhr.responseText));
+      };
+      xhr.onerror = () => reject(new Error("Network error during upload."));
+      xhr.send(recordedBlob);
+    });
+
+    setStatus("✅ Thank you! Your video was uploaded successfully.", "success");
+    progressEl.style.display = "none";
+  } catch (err) {
+    console.error(err);
+    setStatus("Something went wrong: " + err.message, "error");
+    uploadBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
