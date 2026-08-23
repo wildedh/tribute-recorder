@@ -379,10 +379,6 @@ function blobToBase64(blob) {
       const urlSafeBase64 = rawBase64
         .replace(/\+/g, "-")
         .replace(/\//g, "_");
-      console.log("[CLIENT] base64 length:", urlSafeBase64.length);
-      console.log("[CLIENT] first 30 chars:", urlSafeBase64.slice(0, 30));
-      console.log("[CLIENT] last 30 chars:", urlSafeBase64.slice(-30));
-      console.log("[CLIENT] length mod 4:", urlSafeBase64.length % 4);
       resolve(urlSafeBase64);
     };
     reader.onerror = reject;
@@ -391,13 +387,14 @@ function blobToBase64(blob) {
 }
 
 const uploadFrame = document.getElementById("uploadTargetFrame");
-let ignoreNextFrameLoad = true; // the iframe's initial blank load shouldn't count
+let uploadInProgress = false; // only treat a frame load as "done" if we actually just submitted
 
 uploadFrame.addEventListener("load", () => {
-  if (ignoreNextFrameLoad) {
-    ignoreNextFrameLoad = false;
+  if (!uploadInProgress) {
+    // This is just the iframe's normal empty/initial load — not a real submission.
     return;
   }
+  uploadInProgress = false;
   // This fires once the form submission has actually finished round-tripping
   setStatus("✅ Thank you! Your video has been sent.", "success");
   progressEl.style.display = "none";
@@ -452,6 +449,7 @@ uploadBtn.addEventListener("click", async () => {
     });
 
     document.body.appendChild(form);
+    uploadInProgress = true;
     form.submit();
     document.body.removeChild(form);
     // The success message is shown by the iframe's "load" handler above,
