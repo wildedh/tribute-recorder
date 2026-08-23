@@ -381,6 +381,10 @@ function blobToBase64(blob) {
       const urlSafeBase64 = rawBase64
         .replace(/\+/g, "-")
         .replace(/\//g, "_");
+      console.log("[CLIENT] base64 length:", urlSafeBase64.length);
+      console.log("[CLIENT] first 30 chars:", urlSafeBase64.slice(0, 30));
+      console.log("[CLIENT] last 30 chars:", urlSafeBase64.slice(-30));
+      console.log("[CLIENT] length mod 4:", urlSafeBase64.length % 4);
       resolve(urlSafeBase64);
     };
     reader.onerror = reject;
