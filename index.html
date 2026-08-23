@@ -360,8 +360,11 @@ function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      // reader.result looks like "data:video/webm;base64,AAAA..."
-      const base64 = reader.result.split(",")[1];
+      // reader.result looks like "data:video/webm;codecs=vp9,opus;base64,AAAA..."
+      // Note: the mimetype itself can contain a comma (vp9,opus), so we must
+      // split only on the FIRST comma, not every comma.
+      const commaIndex = reader.result.indexOf(",");
+      const base64 = reader.result.substring(commaIndex + 1);
       resolve(base64);
     };
     reader.onerror = reject;
@@ -408,9 +411,6 @@ uploadBtn.addEventListener("click", async () => {
 
   try {
     const base64Data = await blobToBase64(recordedBlob);
-    console.log("Recorded blob size (bytes):", recordedBlob.size);
-    console.log("Base64 string length (chars):", base64Data.length);
-    setStatus(`Encoding done — blob: ${recordedBlob.size} bytes, base64: ${base64Data.length} chars. Uploading…`, "info");
 
     const fields = {
       folderId: person.folderId,
