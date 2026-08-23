@@ -369,15 +369,13 @@ function blobToBase64(blob) {
     const reader = new FileReader();
     reader.onloadend = () => {
       // reader.result looks like "data:video/webm;codecs=vp9,opus;base64,AAAA..."
-      // Note: the mimetype itself can contain a comma (vp9,opus), so we must
-      // split only on the FIRST comma, not every comma.
-      const commaIndex = reader.result.indexOf(",");
-      const rawBase64 = reader.result.substring(commaIndex + 1);
-      // Convert to URL-safe base64 (- and _ instead of + and /, no padding).
-      // Standard base64's "+" character has repeatedly gotten corrupted
-      // somewhere in Google's form-handling pipeline; URL-safe base64 avoids
-      // that entire class of problem since none of its characters have any
-      // special meaning in URL or form encoding.
+      // IMPORTANT: the mimetype itself can contain a comma (vp9,opus), so we
+      // cannot just find "the first comma" — we must find the exact
+      // ";base64," marker that precedes the real payload.
+      const marker = ";base64,";
+      const markerIndex = reader.result.indexOf(marker);
+      const rawBase64 = reader.result.substring(markerIndex + marker.length);
+      // Convert to URL-safe base64 (- and _ instead of + and /).
       const urlSafeBase64 = rawBase64
         .replace(/\+/g, "-")
         .replace(/\//g, "_");
