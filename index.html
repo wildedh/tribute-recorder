@@ -380,8 +380,7 @@ function blobToBase64(blob) {
       // special meaning in URL or form encoding.
       const urlSafeBase64 = rawBase64
         .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
+        .replace(/\//g, "_");
       resolve(urlSafeBase64);
     };
     reader.onerror = reject;
