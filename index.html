@@ -408,6 +408,9 @@ uploadBtn.addEventListener("click", async () => {
 
   try {
     const base64Data = await blobToBase64(recordedBlob);
+    console.log("Recorded blob size (bytes):", recordedBlob.size);
+    console.log("Base64 string length (chars):", base64Data.length);
+    setStatus(`Encoding done — blob: ${recordedBlob.size} bytes, base64: ${base64Data.length} chars. Uploading…`, "info");
 
     const fields = {
       folderId: person.folderId,
