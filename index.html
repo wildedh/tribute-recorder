@@ -270,7 +270,11 @@ function setStatus(message, type) {
 async function initCamera() {
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },
+      video: {
+        facingMode: "user",
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      },
       audio: true
     });
     preview.srcObject = mediaStream;
@@ -302,7 +306,11 @@ startBtn.addEventListener("click", () => {
   let mimeType = "video/webm;codecs=vp9,opus";
   if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "video/webm";
 
-  mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
+  mediaRecorder = new MediaRecorder(mediaStream, {
+    mimeType,
+    videoBitsPerSecond: 500000, // 500 kbps — plenty for a webcam talking-head clip
+    audioBitsPerSecond: 64000   // 64 kbps — fine for spoken voice
+  });
   mediaRecorder.ondataavailable = (e) => {
     if (e.data.size > 0) recordedChunks.push(e.data);
   };
@@ -364,8 +372,17 @@ function blobToBase64(blob) {
       // Note: the mimetype itself can contain a comma (vp9,opus), so we must
       // split only on the FIRST comma, not every comma.
       const commaIndex = reader.result.indexOf(",");
-      const base64 = reader.result.substring(commaIndex + 1);
-      resolve(base64);
+      const rawBase64 = reader.result.substring(commaIndex + 1);
+      // Convert to URL-safe base64 (- and _ instead of + and /, no padding).
+      // Standard base64's "+" character has repeatedly gotten corrupted
+      // somewhere in Google's form-handling pipeline; URL-safe base64 avoids
+      // that entire class of problem since none of its characters have any
+      // special meaning in URL or form encoding.
+      const urlSafeBase64 = rawBase64
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+      resolve(urlSafeBase64);
     };
     reader.onerror = reject;
     reader.readAsDataURL(blob);
